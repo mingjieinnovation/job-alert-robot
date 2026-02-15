@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Job Alert Robot — AI-Powered Job Search</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f7; color: #1a1a2e; line-height: 1.6; }
+
+    /* Nav */
+    .nav { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 0.75rem 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+    .nav-brand { color: #fff; font-weight: 700; font-size: 1.1rem; }
+    .nav-links { display: flex; gap: 0.25rem; }
+    .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; padding: 0.4rem 0.9rem; border-radius: 6px; font-size: 0.85rem; transition: all 0.2s; }
+    .nav-links a.active, .nav-links a:hover { background: rgba(255,255,255,0.2); color: #fff; }
+
+    /* Hero */
+    .hero { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 4rem 2rem 3rem; text-align: center; color: #fff; }
+    .hero h1 { font-size: 2.5rem; font-weight: 800; margin-bottom: 0.75rem; }
+    .hero p { font-size: 1.15rem; opacity: 0.9; max-width: 600px; margin: 0 auto 2rem; }
+    .hero-badges { display: flex; gap: 0.75rem; justify-content: center; flex-wrap: wrap; margin-bottom: 2rem; }
+    .hero-badge { background: rgba(255,255,255,0.2); padding: 0.4rem 1rem; border-radius: 20px; font-size: 0.85rem; backdrop-filter: blur(4px); }
+    .hero-cta { display: inline-block; background: #fff; color: #667eea; padding: 0.75rem 2rem; border-radius: 10px; font-weight: 600; text-decoration: none; font-size: 1rem; transition: transform 0.2s; }
+    .hero-cta:hover { transform: translateY(-2px); }
+
+    /* Container */
+    .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+    /* Section */
+    .section { margin-bottom: 3rem; }
+    .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; }
+    .section-subtitle { color: #888; font-size: 0.95rem; margin-bottom: 1.5rem; }
+
+    /* Demo nav tabs */
+    .demo-nav { display: flex; gap: 0; margin-bottom: 1.5rem; border-bottom: 2px solid #eee; }
+    .demo-tab { padding: 0.6rem 1.25rem; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #888; border: none; background: none; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.2s; }
+    .demo-tab.active { color: #667eea; border-bottom-color: #667eea; }
+    .demo-tab .count { display: inline-block; background: #f0f0f0; padding: 0.1rem 0.5rem; border-radius: 10px; font-size: 0.75rem; margin-left: 0.4rem; }
+
+    /* Cards */
+    .card { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); margin-bottom: 1rem; }
+
+    /* Job cards */
+    .job-card { background: #fff; border-radius: 10px; padding: 1.25rem; box-shadow: 0 1px 4px rgba(0,0,0,0.08); border-left: 4px solid transparent; margin-bottom: 0.75rem; transition: box-shadow 0.2s, transform 0.2s; cursor: pointer; }
+    .job-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.12); transform: translateY(-1px); }
+    .job-card.score-high { border-left-color: #2e7d32; }
+    .job-card.score-mid { border-left-color: #e65100; }
+    .job-card.score-low { border-left-color: #999; }
+    .job-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.4rem; }
+    .job-title { font-size: 1rem; font-weight: 600; color: #1a1a2e; }
+    .job-score { font-size: 0.85rem; font-weight: 700; padding: 0.2rem 0.6rem; border-radius: 12px; white-space: nowrap; }
+    .score-green { background: #e8f5e9; color: #2e7d32; }
+    .score-orange { background: #fff3e0; color: #e65100; }
+    .score-gray { background: #f5f5f5; color: #999; }
+    .job-meta { font-size: 0.85rem; color: #666; margin-bottom: 0.4rem; }
+    .job-desc { font-size: 0.85rem; color: #555; line-height: 1.5; }
+    .job-tags { display: flex; flex-wrap: wrap; gap: 0.3rem; margin-top: 0.5rem; }
+    .job-tag { font-size: 0.75rem; padding: 0.15rem 0.5rem; border-radius: 8px; background: #f0f0f0; }
+    .job-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem; }
+    .dismiss-btn { background: none; border: 1px solid #ddd; border-radius: 6px; padding: 0.25rem 0.6rem; font-size: 0.75rem; color: #999; cursor: pointer; }
+    .dismiss-btn:hover { border-color: #c62828; color: #c62828; }
+
+    /* Keyword chips */
+    .chips { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+    .chip { display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.35rem 0.75rem; border-radius: 20px; font-size: 0.85rem; font-weight: 500; }
+    .chip-boost { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
+    .chip-exclude { background: #fce4ec; color: #c62828; border: 1px solid #ef9a9a; }
+    .chip-weight { font-size: 0.7rem; opacity: 0.7; }
+    .chip-source { font-size: 0.7rem; opacity: 0.7; }
+
+    /* Kanban */
+    .kanban { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; }
+    .kanban-col { border-radius: 12px; padding: 0.75rem; min-height: 200px; }
+    .kanban-title { font-size: 0.85rem; font-weight: 600; text-align: center; margin-bottom: 0.5rem; text-transform: capitalize; }
+    .kanban-card { background: #fff; border-radius: 8px; padding: 0.6rem; margin-bottom: 0.4rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.8rem; }
+    .kanban-card-title { font-weight: 600; margin-bottom: 0.15rem; }
+    .kanban-card-meta { color: #888; font-size: 0.75rem; }
+
+    /* Stats */
+    .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+    .stat-card { background: #fff; border-radius: 10px; padding: 1.25rem; text-align: center; box-shadow: 0 1px 4px rgba(0,0,0,0.08); }
+    .stat-value { font-size: 1.8rem; font-weight: 700; color: #667eea; }
+    .stat-label { font-size: 0.8rem; color: #888; margin-top: 0.25rem; }
+
+    /* Flow diagram */
+    .flow { display: flex; align-items: center; justify-content: center; gap: 0.5rem; flex-wrap: wrap; margin: 2rem 0; }
+    .flow-step { background: #fff; padding: 0.75rem 1.25rem; border-radius: 10px; font-size: 0.85rem; font-weight: 500; box-shadow: 0 1px 4px rgba(0,0,0,0.08); text-align: center; }
+    .flow-arrow { color: #667eea; font-size: 1.2rem; font-weight: 700; }
+
+    /* Feature grid */
+    .features { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; margin: 2rem 0; }
+    .feature { background: #fff; border-radius: 12px; padding: 1.5rem; box-shadow: 0 2px 8px rgba(0,0,0,0.06); }
+    .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+    .feature h3 { font-size: 1rem; margin-bottom: 0.5rem; }
+    .feature p { font-size: 0.85rem; color: #666; }
+
+    /* Controls row */
+    .controls { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.5rem; }
+    .ctrl-select { padding: 0.5rem 0.75rem; border: 1px solid #ddd; border-radius: 8px; font-size: 0.85rem; background: #fff; }
+    .ctrl-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #fff; border: none; padding: 0.5rem 1.25rem; border-radius: 8px; cursor: pointer; font-weight: 500; font-size: 0.9rem; }
+
+    /* Page sections */
+    .page-section { display: none; }
+    .page-section.active { display: block; }
+
+    /* Footer */
+    .footer { text-align: center; padding: 2rem; color: #888; font-size: 0.85rem; background: #fff; margin-top: 2rem; }
+    .footer a { color: #667eea; text-decoration: none; }
+
+    /* Keyword picker demo */
+    .kw-picker { padding: 1rem; background: #fff8f8; border-radius: 10px; margin-bottom: 1rem; border: 1px solid #ffcdd2; }
+    .kw-picker-title { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.6rem; }
+    .kw-chip { display: inline-flex; align-items: center; padding: 0.3rem 0.7rem; border-radius: 16px; font-size: 0.82rem; font-weight: 500; cursor: pointer; border: 1px solid; margin: 0.2rem; transition: all 0.15s; }
+    .kw-chip.selected { background: #ffcdd2; border-color: #e57373; color: #b71c1c; }
+    .kw-chip.unselected { background: #f5f5f5; border-color: #ddd; color: #999; }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .hero h1 { font-size: 1.8rem; }
+      .features { grid-template-columns: 1fr; }
+      .kanban { grid-template-columns: repeat(2, 1fr); }
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+      .nav-links { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- Navigation -->
+<nav class="nav">
+  <div class="nav-brand">Job Alert Robot</div>
+  <div class="nav-links">
+    <a href="#" class="active" onclick="showPage('home')">Home</a>
+    <a href="#" onclick="showPage('search')">Search</a>
+    <a href="#" onclick="showPage('applications')">Applications</a>
+    <a href="#" onclick="showPage('analytics')">Analytics</a>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Job Alert Robot</h1>
+  <p>AI-powered job search that scrapes 6 sources, scores against your profile, and learns from your feedback.</p>
+  <div class="hero-badges">
+    <span class="hero-badge">6 Job Sources</span>
+    <span class="hero-badge">Smart Scoring</span>
+    <span class="hero-badge">Feedback Learning</span>
+    <span class="hero-badge">Application Tracking</span>
+  </div>
+  <a href="https://github.com/lovepsycandgame/job-alert-robot" class="hero-cta">View on GitHub</a>
+</div>
+
+<div class="container">
+
+<!-- How It Works -->
+<div class="section">
+  <h2 class="section-title">How It Works</h2>
+  <p class="section-subtitle">A continuous learning loop that gets smarter with every action you take.</p>
+  <div class="flow">
+    <div class="flow-step">Upload Resume</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-step">Extract Keywords</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-step">Search 6 Sources</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-step">Score &amp; Rank</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-step">Review Jobs</div>
+    <span class="flow-arrow">&rarr;</span>
+    <div class="flow-step">Learn &amp; Improve</div>
+  </div>
+</div>
+
+<!-- Features -->
+<div class="section">
+  <h2 class="section-title">Features</h2>
+  <div class="features">
+    <div class="feature">
+      <div class="feature-icon">&#x1F50D;</div>
+      <h3>Multi-Source Scraping</h3>
+      <p>Adzuna, Reed, LinkedIn, Google Jobs, X/Twitter, and Welcome to the Jungle — all in one search.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F3AF;</div>
+      <h3>Smart Scoring</h3>
+      <p>Boost/exclude keywords with adjustable weights. Hard filters for salary, experience, contracts, languages.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4C4;</div>
+      <h3>Resume Parsing</h3>
+      <p>Upload your PDF resume — spaCy NLP extracts skills and creates boost keywords automatically.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F9E0;</div>
+      <h3>Feedback Learning</h3>
+      <p>Dismiss a job with notes? System suggests exclude keywords. Apply? It learns what to boost.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4CB;</div>
+      <h3>Application Kanban</h3>
+      <p>Drag-and-drop board: Interested &rarr; Applied &rarr; Interview &rarr; Offer. Track everything.</p>
+    </div>
+    <div class="feature">
+      <div class="feature-icon">&#x1F4CA;</div>
+      <h3>Analytics &amp; Retraining</h3>
+      <p>See keyword performance, application rates, and retrain weights from your feedback history.</p>
+    </div>
+  </div>
+</div>
+
+<!-- === DEMO: Home Page === -->
+<div id="page-home" class="page-section active">
+  <h2 class="section-title">Demo: Home Page</h2>
+  <p class="section-subtitle">Manage your keywords and analyze job descriptions.</p>
+
+  <!-- Keywords -->
+  <div class="card">
+    <div style="font-size:1.1rem; font-weight:600; margin-bottom:1rem;">Keywords (18)</div>
+
+    <div style="margin-bottom:1rem;">
+      <div style="font-size:0.85rem; font-weight:600; color:#888; margin-bottom:0.5rem; text-transform:uppercase;">Boost Keywords</div>
+      <div class="chips">
+        <span class="chip chip-boost">python</span>
+        <span class="chip chip-boost">sql</span>
+        <span class="chip chip-boost">tableau</span>
+        <span class="chip chip-boost">power bi</span>
+        <span class="chip chip-boost">product analytics</span>
+        <span class="chip chip-boost">a/b testing</span>
+        <span class="chip chip-boost">machine learning</span>
+        <span class="chip chip-boost">data analysis</span>
+        <span class="chip chip-boost">pandas</span>
+        <span class="chip chip-boost">agile</span>
+        <span class="chip chip-boost">stakeholder management</span>
+        <span class="chip chip-boost">kpi</span>
+        <span class="chip chip-boost">genai <span class="chip-weight">(0.5x)</span> <span class="chip-source">learned</span></span>
+        <span class="chip chip-boost">llm <span class="chip-weight">(0.5x)</span> <span class="chip-source">learned</span></span>
+      </div>
+    </div>
+
+    <div>
+      <div style="font-size:0.85rem; font-weight:600; color:#888; margin-bottom:0.5rem; text-transform:uppercase;">Exclude Keywords</div>
+      <div class="chips">
+        <span class="chip chip-exclude">accountant</span>
+        <span class="chip chip-exclude">warehouse</span>
+        <span class="chip chip-exclude">nursing</span>
+        <span class="chip chip-exclude">recruitment <span class="chip-source">learned</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === DEMO: Search Page === -->
+<div id="page-search" class="page-section">
+  <h2 class="section-title">Demo: Search Results</h2>
+  <p class="section-subtitle">Jobs scored and ranked from 6 sources.</p>
+
+  <div class="controls">
+    <select class="ctrl-select"><option>All Scores</option><option>Score 1+</option><option>Score 3+</option><option>Score 5+</option></select>
+    <select class="ctrl-select"><option>All Sources</option><option>Adzuna</option><option>Reed</option><option>LinkedIn</option><option>Google Jobs</option><option>Jungle</option></select>
+    <select class="ctrl-select"><option>Sort by Score</option><option>Sort by Date</option></select>
+    <button class="ctrl-btn">New Search</button>
+  </div>
+
+  <div class="demo-nav">
+    <button class="demo-tab active">Not Processed <span class="count">127</span></button>
+    <button class="demo-tab">Processed <span class="count">5</span></button>
+    <button class="demo-tab">Not Interested <span class="count">12</span></button>
+  </div>
+
+  <div style="font-size:0.85rem; color:#888; margin-bottom:1rem;">Showing 127 of 203 jobs</div>
+
+  <!-- Job cards -->
+  <div class="job-card score-high">
+    <div class="job-header">
+      <div class="job-title">Senior Product Analyst</div>
+      <span class="job-score score-green">+7</span>
+    </div>
+    <div class="job-meta">Monzo &middot; London &middot; &#163;55,000 - &#163;70,000 &middot; Adzuna</div>
+    <div class="job-desc">Join our Product Analytics team to drive data-informed decisions using SQL, Python, and Tableau. You'll work closely with product managers on A/B testing...</div>
+    <div class="job-footer">
+      <div class="job-tags">
+        <span class="job-tag">sql</span>
+        <span class="job-tag">python</span>
+        <span class="job-tag">tableau</span>
+        <span class="job-tag">a/b testing</span>
+      </div>
+      <button class="dismiss-btn">Not Interested</button>
+    </div>
+  </div>
+
+  <div class="job-card score-high">
+    <div class="job-header">
+      <div class="job-title">Data Analyst — AI Products</div>
+      <span class="job-score score-green">+6</span>
+    </div>
+    <div class="job-meta">Deliveroo &middot; London &middot; &#163;50,000 - &#163;65,000 &middot; LinkedIn</div>
+    <div class="job-desc">Work on GenAI-powered features, analysing user behaviour and building dashboards. Experience with Python, SQL, and machine learning concepts required...</div>
+    <div class="job-footer">
+      <div class="job-tags">
+        <span class="job-tag">genai</span>
+        <span class="job-tag">python</span>
+        <span class="job-tag">sql</span>
+        <span class="job-tag">machine learning</span>
+      </div>
+      <button class="dismiss-btn">Not Interested</button>
+    </div>
+  </div>
+
+  <div class="job-card score-high">
+    <div class="job-header">
+      <div class="job-title">Product Manager — Growth</div>
+      <span class="job-score score-green">+5</span>
+    </div>
+    <div class="job-meta">Revolut &middot; London &middot; &#163;60,000 - &#163;80,000 &middot; Jungle</div>
+    <div class="job-desc">Drive growth initiatives with data-driven product strategy. Work cross-functionally with engineering, design, and data teams on KPI optimization...</div>
+    <div class="job-footer">
+      <div class="job-tags">
+        <span class="job-tag">product analytics</span>
+        <span class="job-tag">kpi</span>
+        <span class="job-tag">agile</span>
+        <span class="job-tag">data-driven</span>
+      </div>
+      <button class="dismiss-btn">Not Interested</button>
+    </div>
+  </div>
+
+  <div class="job-card score-mid">
+    <div class="job-header">
+      <div class="job-title">Business Analyst</div>
+      <span class="job-score score-orange">+2</span>
+    </div>
+    <div class="job-meta">HSBC &middot; London &middot; &#163;48,000 - &#163;55,000 &middot; Reed</div>
+    <div class="job-desc">Support digital transformation projects with stakeholder management and requirements gathering. SQL and Power BI experience preferred...</div>
+    <div class="job-footer">
+      <div class="job-tags">
+        <span class="job-tag">sql</span>
+        <span class="job-tag">power bi</span>
+      </div>
+      <button class="dismiss-btn">Not Interested</button>
+    </div>
+  </div>
+
+  <div class="job-card score-low">
+    <div class="job-header">
+      <div class="job-title">Insight Analyst</div>
+      <span class="job-score score-gray">+0</span>
+    </div>
+    <div class="job-meta">Tesco &middot; London &middot; &#163;45,000 &middot; Google Jobs</div>
+    <div class="job-desc">Provide commercial insights to support buying and merchandising teams. Excel-based reporting and stakeholder presentations...</div>
+    <div class="job-footer">
+      <div class="job-tags">
+        <span class="job-tag">excel</span>
+      </div>
+      <button class="dismiss-btn">Not Interested</button>
+    </div>
+  </div>
+
+  <!-- Keyword picker demo -->
+  <div style="margin-top:2rem;">
+    <h3 style="font-size:1rem; font-weight:600; margin-bottom:0.75rem;">Feedback Learning Demo</h3>
+    <p style="font-size:0.85rem; color:#666; margin-bottom:0.75rem;">When you dismiss a job with a note like <em>"salary too low, not interested in banking"</em>, the system suggests keywords to exclude:</p>
+    <div class="kw-picker">
+      <div class="kw-picker-title">Suggested exclude keywords &mdash; select which to save:</div>
+      <div style="margin-bottom:0.75rem;">
+        <span class="kw-chip selected">&#10003; salary</span>
+        <span class="kw-chip selected">&#10003; banking</span>
+        <span class="kw-chip unselected">low</span>
+      </div>
+      <div style="display:flex; gap:0.5rem;">
+        <button class="ctrl-btn" style="font-size:0.85rem; padding:0.4rem 1rem;">Save 2 keywords</button>
+        <button style="background:#f0f0f0; color:#333; border:none; padding:0.4rem 1rem; border-radius:8px; font-size:0.85rem; cursor:pointer;">Skip</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- === DEMO: Applications Page === -->
+<div id="page-applications" class="page-section">
+  <h2 class="section-title">Demo: Application Tracker</h2>
+  <p class="section-subtitle">Drag-and-drop kanban board for tracking applications.</p>
+
+  <div class="kanban">
+    <div class="kanban-col" style="background:#e3f2fd;">
+      <div class="kanban-title">Interested (2)</div>
+      <div class="kanban-card">
+        <div class="kanban-card-title">Business Analyst</div>
+        <div class="kanban-card-meta">HSBC &middot; Score: +2</div>
+      </div>
+      <div class="kanban-card">
+        <div class="kanban-card-title">Insight Analyst</div>
+        <div class="kanban-card-meta">Tesco &middot; Score: +0</div>
+      </div>
+    </div>
+    <div class="kanban-col" style="background:#fff3e0;">
+      <div class="kanban-title">Applied (2)</div>
+      <div class="kanban-card">
+        <div class="kanban-card-title">Senior Product Analyst</div>
+        <div class="kanban-card-meta">Monzo &middot; Score: +7</div>
+      </div>
+      <div class="kanban-card">
+        <div class="kanban-card-title">Data Analyst — AI</div>
+        <div class="kanban-card-meta">Deliveroo &middot; Score: +6</div>
+      </div>
+    </div>
+    <div class="kanban-col" style="background:#f3e5f5;">
+      <div class="kanban-title">Interview (1)</div>
+      <div class="kanban-card">
+        <div class="kanban-card-title">Product Manager</div>
+        <div class="kanban-card-meta">Revolut &middot; Score: +5</div>
+      </div>
+    </div>
+    <div class="kanban-col" style="background:#e8f5e9;">
+      <div class="kanban-title">Offer (0)</div>
+      <div style="color:#aaa; font-size:0.8rem; text-align:center; padding:1rem;">Drop here</div>
+    </div>
+    <div class="kanban-col" style="background:#fce4ec;">
+      <div class="kanban-title">Rejected (0)</div>
+      <div style="color:#aaa; font-size:0.8rem; text-align:center; padding:1rem;">Drop here</div>
+    </div>
+  </div>
+</div>
+
+<!-- === DEMO: Analytics Page === -->
+<div id="page-analytics" class="page-section">
+  <h2 class="section-title">Demo: Analytics &amp; Insights</h2>
+  <p class="section-subtitle">Track keyword performance and retrain the scoring model.</p>
+
+  <div class="stats-grid">
+    <div class="stat-card"><div class="stat-value">203</div><div class="stat-label">Total Jobs</div></div>
+    <div class="stat-card"><div class="stat-value">5</div><div class="stat-label">Applications</div></div>
+    <div class="stat-card"><div class="stat-value">3</div><div class="stat-label">Feedbacks</div></div>
+    <div class="stat-card"><div class="stat-value">2.5%</div><div class="stat-label">Application Rate</div></div>
+  </div>
+
+  <div class="card">
+    <div style="font-size:1rem; font-weight:600; margin-bottom:1rem;">Keyword Performance</div>
+    <table style="width:100%; font-size:0.85rem; border-collapse:collapse;">
+      <tr style="border-bottom:1px solid #eee; color:#888; text-align:left;">
+        <th style="padding:0.5rem;">Keyword</th>
+        <th style="padding:0.5rem;">Weight</th>
+        <th style="padding:0.5rem;">Source</th>
+        <th style="padding:0.5rem;">Applied Hits</th>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:0.5rem; font-weight:500;">python</td>
+        <td style="padding:0.5rem;"><div style="background:#e8f5e9; border-radius:4px; height:8px; width:80%;"></div> 1.6</td>
+        <td style="padding:0.5rem; color:#888;">resume</td>
+        <td style="padding:0.5rem;">3</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:0.5rem; font-weight:500;">sql</td>
+        <td style="padding:0.5rem;"><div style="background:#e8f5e9; border-radius:4px; height:8px; width:75%;"></div> 1.5</td>
+        <td style="padding:0.5rem; color:#888;">resume</td>
+        <td style="padding:0.5rem;">4</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:0.5rem; font-weight:500;">product analytics</td>
+        <td style="padding:0.5rem;"><div style="background:#e8f5e9; border-radius:4px; height:8px; width:65%;"></div> 1.3</td>
+        <td style="padding:0.5rem; color:#888;">resume</td>
+        <td style="padding:0.5rem;">2</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:0.5rem; font-weight:500;">genai</td>
+        <td style="padding:0.5rem;"><div style="background:#fff3e0; border-radius:4px; height:8px; width:25%;"></div> 0.5</td>
+        <td style="padding:0.5rem; color:#888;">learned</td>
+        <td style="padding:0.5rem;">1</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f5f5f5;">
+        <td style="padding:0.5rem; font-weight:500;">a/b testing</td>
+        <td style="padding:0.5rem;"><div style="background:#e8f5e9; border-radius:4px; height:8px; width:50%;"></div> 1.0</td>
+        <td style="padding:0.5rem; color:#888;">manual</td>
+        <td style="padding:0.5rem;">2</td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+<!-- Tech Stack -->
+<div class="section">
+  <h2 class="section-title">Tech Stack</h2>
+  <div style="display:flex; gap:1rem; flex-wrap:wrap;">
+    <span class="chip chip-boost" style="font-size:0.9rem;">Flask</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">React</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">SQLite</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">spaCy NLP</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">Vite</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">Axios</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">PyPDF2</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">Algolia API</span>
+    <span class="chip chip-boost" style="font-size:0.9rem;">SerpAPI</span>
+  </div>
+</div>
+
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  Built by <a href="https://github.com/lovepsycandgame">lovepsycandgame</a> &middot;
+  <a href="https://github.com/lovepsycandgame/job-alert-robot">View Source on GitHub</a>
+</div>
+
+<script>
+function showPage(page) {
+  document.querySelectorAll('.page-section').forEach(el => el.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  document.querySelectorAll('.nav-links a').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+}
+
+// Make keyword chips toggleable
+document.querySelectorAll('.kw-chip').forEach(chip => {
+  chip.addEventListener('click', () => {
+    chip.classList.toggle('selected');
+    chip.classList.toggle('unselected');
+    if (chip.classList.contains('selected')) {
+      chip.innerHTML = '&#10003; ' + chip.textContent.replace('✓ ', '');
+    } else {
+      chip.textContent = chip.textContent.replace('✓ ', '');
+    }
+  });
+});
+</script>
+
+</body>
+</html>
