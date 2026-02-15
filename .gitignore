@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Environment & secrets
+.env
+*.env
+
+# Database
+*.db
+
+# Uploads
+webapp/backend/uploads/*
+!webapp/backend/uploads/.gitkeep
+
+# Node
+node_modules/
+webapp/frontend/dist/
+
+# Logs
+*.log
+
+# Job data files
+seen_jobs.json
+*.csv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Archives
+*.zip
