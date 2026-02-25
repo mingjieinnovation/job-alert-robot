@@ -104,7 +104,7 @@ export default function SearchPage() {
   const loadJobs = async () => {
     setLoading(true)
     try {
-      const params = { sort, per_page: 500 }
+      const params = { sort, per_page: 500, min_score: 1 }
       if (minScore !== '') params.min_score = parseFloat(minScore)
       if (source) params.source = source
       const res = await getJobs(params)
