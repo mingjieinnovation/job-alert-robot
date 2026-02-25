@@ -646,25 +646,43 @@ def fetch_and_store_jobs(keywords: list[dict]) -> dict:
 
     logger.info(f"Total fetched from all sources: {len(all_raw_jobs)}")
 
-    # Cross-source deduplication: same title+company = same job
+    # Cross-source deduplication: same title+company OR same description = same job
     def _dedup_key(title: str, company: str) -> str:
         t = re.sub(r'[^a-z0-9]', '', title.lower())
         c = re.sub(r'[^a-z0-9]', '', company.lower())
         return f"{c}_{t}"
 
-    seen_dedup = {}  # dedup_key -> job_data (keep first seen / richer entry)
+    def _desc_fingerprint(description: str) -> str | None:
+        """First 200 chars of description, normalised. None if description too short."""
+        fp = re.sub(r'\s+', ' ', (description or "").lower().strip())[:200]
+        return fp if len(fp) >= 50 else None  # ignore very short/empty descriptions
+
+    seen_dedup = {}   # title+company key -> job_data
+    seen_desc = {}    # description fingerprint -> job_data
     dedup_count = 0
     for job_data in all_raw_jobs:
         dk = _dedup_key(job_data["title"], job_data["company"])
+        fp = _desc_fingerprint(job_data.get("description", ""))
+
+        # Check duplicate by title+company
         if dk in seen_dedup:
             existing = seen_dedup[dk]
-            # Keep the one with more info (salary, description)
             if (not existing.get("salary") and job_data.get("salary")) or \
                (not existing.get("description") and job_data.get("description")):
                 seen_dedup[dk] = job_data
+                if fp:
+                    seen_desc[fp] = job_data
             dedup_count += 1
-        else:
-            seen_dedup[dk] = job_data
+            continue
+
+        # Check duplicate by description fingerprint (same job, different title)
+        if fp and fp in seen_desc:
+            dedup_count += 1
+            continue
+
+        seen_dedup[dk] = job_data
+        if fp:
+            seen_desc[fp] = job_data
 
     all_raw_jobs = list(seen_dedup.values())
     if dedup_count:
@@ -688,12 +706,15 @@ def fetch_and_store_jobs(keywords: list[dict]) -> dict:
     exclude_keywords = [{"keyword": k["keyword"], "weight": k.get("weight", 2.0)}
                         for k in keywords if k.get("category") == "exclude"]
 
-    # Pre-load existing dedup keys from DB to catch cross-source duplicates across sessions
-    # (e.g. same job stored as linkedin_123 last week and adzuna_456 this week)
+    # Pre-load existing dedup keys and description fingerprints from DB
     existing_dedup_keys = set()
-    for row in JobRecord.query.with_entities(JobRecord.title, JobRecord.company).all():
+    existing_desc_fps = set()
+    for row in JobRecord.query.with_entities(JobRecord.title, JobRecord.company, JobRecord.description).all():
         dk = _dedup_key(row.title or "", row.company or "")
         existing_dedup_keys.add(dk)
+        fp = _desc_fingerprint(row.description or "")
+        if fp:
+            existing_desc_fps.add(fp)
 
     new_count = 0
     seen_keys = set()
@@ -714,7 +735,15 @@ def fetch_and_store_jobs(keywords: list[dict]) -> dict:
         dk = _dedup_key(job_data["title"], job_data["company"])
         if dk in existing_dedup_keys:
             continue
-        existing_dedup_keys.add(dk)  # Reserve so same job twice in this batch is also caught
+
+        # Skip description duplicates: same job listed twice with different titles
+        fp = _desc_fingerprint(job_data.get("description", ""))
+        if fp and fp in existing_desc_fps:
+            continue
+
+        existing_dedup_keys.add(dk)
+        if fp:
+            existing_desc_fps.add(fp)
 
         # Score (include salary in the text for salary filtering)
         scored = score_job(
