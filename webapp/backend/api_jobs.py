@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify
 from models import db, JobRecord, JobApplication, UserKeyword
 from service_scraper import fetch_and_store_jobs
 from service_scoring import score_job
+from sqlalchemy import func, and_, or_
 import json
 
 jobs_bp = Blueprint("jobs", __name__)
@@ -49,11 +50,30 @@ def list_jobs():
         ).subquery()
         query = query.filter(~JobRecord.id.in_(dismissed_job_ids))
 
-    # Hide ALL jobs that have been processed (any application status)
+    # Hide ALL jobs that have been processed (any application status),
+    # including cross-source duplicates of processed jobs already in the DB
     hide_processed = request.args.get("hide_processed")
     if hide_processed and hide_processed.lower() == "true":
-        processed_job_ids = db.session.query(JobApplication.job_id).subquery()
-        query = query.filter(~JobRecord.id.in_(processed_job_ids))
+        # Step 1: exclude jobs with a direct application record
+        processed_job_ids_sq = db.session.query(JobApplication.job_id)
+        query = query.filter(~JobRecord.id.in_(processed_job_ids_sq))
+
+        # Step 2: also exclude same-title+company duplicates from other sources
+        # (handles pre-existing duplicates before the insert-level dedup was added)
+        processed_tc = db.session.query(
+            func.lower(JobRecord.title),
+            func.lower(JobRecord.company)
+        ).join(JobApplication, JobRecord.id == JobApplication.job_id).all()
+
+        if processed_tc:
+            conditions = [
+                and_(
+                    func.lower(JobRecord.title) == tc[0],
+                    func.lower(JobRecord.company) == tc[1]
+                )
+                for tc in processed_tc
+            ]
+            query = query.filter(~or_(*conditions))
 
     sort = request.args.get("sort", "score")
     if sort == "date":
