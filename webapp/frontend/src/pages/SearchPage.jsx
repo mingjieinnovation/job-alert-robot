@@ -97,13 +97,14 @@ export default function SearchPage() {
   const [minScore, setMinScore] = useState('')
   const [source, setSource] = useState('')
   const [sort, setSort] = useState('score')
+  const [activeTab, setActiveTab] = useState('new')
   const [searchProgress, setSearchProgress] = useState('')
   const [dismissedIds, setDismissedIds] = useState(new Set())
 
   const loadJobs = async () => {
     setLoading(true)
     try {
-      const params = { sort, per_page: 200, hide_processed: true }
+      const params = { sort, per_page: 500 }
       if (minScore !== '') params.min_score = parseFloat(minScore)
       if (source) params.source = source
       const res = await getJobs(params)
@@ -151,9 +152,13 @@ export default function SearchPage() {
     }
   }
 
-  // Only unprocessed jobs are returned by the backend (hide_processed=true)
-  // Exclude any just-dismissed in this session
-  const displayedJobs = jobs.filter(j => !dismissedIds.has(j.id))
+  // Split jobs into tabs
+  const newJobs = jobs.filter(j => !j.application && !dismissedIds.has(j.id))
+  const processedJobs = jobs.filter(j => j.application && j.application.status !== 'not_interested')
+  const notInterestedJobs = jobs.filter(j => j.application && j.application.status === 'not_interested')
+  const displayedJobs = activeTab === 'processed' ? processedJobs
+    : activeTab === 'not_interested' ? notInterestedJobs
+    : newJobs
 
   return (
     <div>
@@ -214,8 +219,31 @@ export default function SearchPage() {
 
       {!searching && (
         <>
+          <div style={styles.tabs}>
+            <button
+              style={{ ...styles.tab, ...(activeTab === 'new' ? styles.tabActive : {}) }}
+              onClick={() => setActiveTab('new')}
+            >
+              New
+              <span style={styles.tabCount}>{newJobs.length}</span>
+            </button>
+            <button
+              style={{ ...styles.tab, ...(activeTab === 'processed' ? styles.tabActive : {}) }}
+              onClick={() => setActiveTab('processed')}
+            >
+              Processed
+              <span style={styles.tabCount}>{processedJobs.length}</span>
+            </button>
+            <button
+              style={{ ...styles.tab, ...(activeTab === 'not_interested' ? styles.tabActive : {}) }}
+              onClick={() => setActiveTab('not_interested')}
+            >
+              Not Interested
+              <span style={styles.tabCount}>{notInterestedJobs.length}</span>
+            </button>
+          </div>
           <div style={styles.stats}>
-            {displayedJobs.length} new job{displayedJobs.length !== 1 ? 's' : ''} to review
+            Showing {displayedJobs.length} of {total} jobs
           </div>
           <JobList jobs={displayedJobs} loading={loading} onDismiss={(jobId) => {
             setDismissedIds(prev => new Set([...prev, jobId]))
