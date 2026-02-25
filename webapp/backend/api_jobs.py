@@ -24,7 +24,8 @@ def search_jobs():
 @jobs_bp.route("/api/jobs", methods=["GET"])
 def list_jobs():
     """List jobs with optional filters."""
-    query = JobRecord.query
+    # Always exclude hard-filtered jobs (score = -99: contract, wrong title, excluded keyword in title, etc.)
+    query = JobRecord.query.filter(JobRecord.match_score > -99)
 
     min_score = request.args.get("min_score", type=float)
     if min_score is not None:

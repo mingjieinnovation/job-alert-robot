@@ -173,6 +173,17 @@ def score_job(job_dict: dict, boost_keywords: list, exclude_keywords: list) -> d
         job_dict["experience_ok"] = False
         return job_dict
 
+    # Hard filter: exclude keyword in the job TITLE → always reject
+    # (soft scoring still applies when keyword is only in description)
+    title_text = job_dict.get("title", "").lower()
+    for kw_data in exclude_keywords:
+        kw = kw_data["keyword"].lower()
+        if kw in title_text:
+            job_dict["match_score"] = -99
+            job_dict["match_tags"] = json.dumps([f"❌{kw_data['keyword']}"])
+            job_dict["experience_ok"] = False
+            return job_dict
+
     # Boost keywords
     for kw_data in boost_keywords:
         kw = kw_data["keyword"].lower()
