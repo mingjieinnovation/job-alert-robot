@@ -26,6 +26,7 @@ CONTRACT_KEYWORDS = [
     "ftc", " month ftc", "month contract",
     "6 month", "12 month", "3 month", "9 month",
     "maternity cover", "paternity cover",
+    "interim", "inside ir35", "outside ir35", "day rate", "ir35",
 ]
 
 # Language requirements to exclude

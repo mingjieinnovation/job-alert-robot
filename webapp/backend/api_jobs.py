@@ -49,6 +49,12 @@ def list_jobs():
         ).subquery()
         query = query.filter(~JobRecord.id.in_(dismissed_job_ids))
 
+    # Hide ALL jobs that have been processed (any application status)
+    hide_processed = request.args.get("hide_processed")
+    if hide_processed and hide_processed.lower() == "true":
+        processed_job_ids = db.session.query(JobApplication.job_id).subquery()
+        query = query.filter(~JobRecord.id.in_(processed_job_ids))
+
     sort = request.args.get("sort", "score")
     if sort == "date":
         query = query.order_by(JobRecord.first_seen_at.desc())

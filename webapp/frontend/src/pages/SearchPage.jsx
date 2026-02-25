@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { searchJobs, getJobs } from '../api'
 import JobList from '../components/JobList'
 
@@ -88,6 +89,7 @@ const styles = {
 }
 
 export default function SearchPage() {
+  const location = useLocation()
   const [jobs, setJobs] = useState([])
   const [loading, setLoading] = useState(false)
   const [searching, setSearching] = useState(false)
@@ -95,14 +97,13 @@ export default function SearchPage() {
   const [minScore, setMinScore] = useState('')
   const [source, setSource] = useState('')
   const [sort, setSort] = useState('score')
-  const [activeTab, setActiveTab] = useState('not_processed')
   const [searchProgress, setSearchProgress] = useState('')
   const [dismissedIds, setDismissedIds] = useState(new Set())
 
   const loadJobs = async () => {
     setLoading(true)
     try {
-      const params = { sort, per_page: 200 }
+      const params = { sort, per_page: 200, hide_processed: true }
       if (minScore !== '') params.min_score = parseFloat(minScore)
       if (source) params.source = source
       const res = await getJobs(params)
@@ -115,7 +116,8 @@ export default function SearchPage() {
     }
   }
 
-  useEffect(() => { loadJobs() }, [minScore, source, sort])
+  // Reload when navigating back to this page (location changes) or filters change
+  useEffect(() => { loadJobs() }, [location, minScore, source, sort])
 
   const handleSearch = async () => {
     setSearching(true)
@@ -149,13 +151,9 @@ export default function SearchPage() {
     }
   }
 
-  // Split jobs into categories
-  const processedJobs = jobs.filter(j => j.application && j.application.status !== 'not_interested')
-  const notProcessedJobs = jobs.filter(j => !j.application && !dismissedIds.has(j.id))
-  const notInterestedJobs = jobs.filter(j => j.application && j.application.status === 'not_interested')
-  const displayedJobs = activeTab === 'processed' ? processedJobs
-    : activeTab === 'not_interested' ? notInterestedJobs
-    : notProcessedJobs
+  // Only unprocessed jobs are returned by the backend (hide_processed=true)
+  // Exclude any just-dismissed in this session
+  const displayedJobs = jobs.filter(j => !dismissedIds.has(j.id))
 
   return (
     <div>
@@ -216,33 +214,8 @@ export default function SearchPage() {
 
       {!searching && (
         <>
-          {/* Tabs: Not Processed / Processed */}
-          <div style={styles.tabs}>
-            <button
-              style={{ ...styles.tab, ...(activeTab === 'not_processed' ? styles.tabActive : {}) }}
-              onClick={() => setActiveTab('not_processed')}
-            >
-              Not Processed
-              <span style={styles.tabCount}>{notProcessedJobs.length}</span>
-            </button>
-            <button
-              style={{ ...styles.tab, ...(activeTab === 'processed' ? styles.tabActive : {}) }}
-              onClick={() => setActiveTab('processed')}
-            >
-              Processed
-              <span style={styles.tabCount}>{processedJobs.length}</span>
-            </button>
-            <button
-              style={{ ...styles.tab, ...(activeTab === 'not_interested' ? styles.tabActive : {}) }}
-              onClick={() => setActiveTab('not_interested')}
-            >
-              Not Interested
-              <span style={styles.tabCount}>{notInterestedJobs.length}</span>
-            </button>
-          </div>
-
           <div style={styles.stats}>
-            Showing {displayedJobs.length} of {total} jobs
+            {displayedJobs.length} new job{displayedJobs.length !== 1 ? 's' : ''} to review
           </div>
           <JobList jobs={displayedJobs} loading={loading} onDismiss={(jobId) => {
             setDismissedIds(prev => new Set([...prev, jobId]))

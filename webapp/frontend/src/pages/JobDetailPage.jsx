@@ -282,12 +282,8 @@ export default function JobDetailPage() {
 
   const handleNoteSave = async () => {
     if (!app) return
-    const updates = { notes }
-    if (app.status === 'interested') {
-      updates.status = 'applied'
-    }
     try {
-      const res = await updateApplication(app.id, updates)
+      const res = await updateApplication(app.id, { notes })
       showSuggestions(res.data.suggested_keywords, res.data.keyword_category)
     } catch (err) {
       console.error(err)
@@ -453,11 +449,6 @@ export default function JobDetailPage() {
               {noteSaved && (
                 <span style={{ color: '#2e7d32', fontSize: '0.85rem', fontWeight: 500 }}>
                   Saved!
-                </span>
-              )}
-              {app.status === 'interested' && (
-                <span style={{ color: '#888', fontSize: '0.8rem' }}>
-                  (will also mark as Applied)
                 </span>
               )}
             </div>

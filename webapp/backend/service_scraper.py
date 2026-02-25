@@ -64,6 +64,7 @@ CONTRACT_KEYWORDS = [
     "FTC", "ftc", " month ftc", "month contract",
     "6 month", "12 month", "3 month", "9 month",
     "maternity cover", "paternity cover", "temporary",
+    "interim", "inside ir35", "outside ir35", "day rate", "ir35",
 ]
 
 # Language requirements to exclude (keep only Chinese/English roles)
@@ -129,14 +130,15 @@ def _requires_other_language(text: str) -> bool:
 
 
 # Default job-title search queries (always used as the base)
+# NOTE: First 5 are sent to LinkedIn (rate-limited) - keep the most important ones here
 DEFAULT_SEARCH_QUERIES = [
+    "product manager London",
     "analyst London",
     "data analyst London",
     "product analyst London",
     "business analyst London",
-    "insight analyst London",
-    "product manager London",
     "associate product manager London",
+    "insight analyst London",
     "junior product manager London",
     "senior analyst London",
 ]
@@ -259,7 +261,7 @@ def fetch_linkedin(queries: list[str]) -> list[dict]:
     }
 
     # Use fewer queries for LinkedIn (rate sensitive)
-    linkedin_queries = queries[:5]
+    linkedin_queries = queries[:7]
 
     for query in linkedin_queries:
         try:
@@ -686,20 +688,33 @@ def fetch_and_store_jobs(keywords: list[dict]) -> dict:
     exclude_keywords = [{"keyword": k["keyword"], "weight": k.get("weight", 2.0)}
                         for k in keywords if k.get("category") == "exclude"]
 
+    # Pre-load existing dedup keys from DB to catch cross-source duplicates across sessions
+    # (e.g. same job stored as linkedin_123 last week and adzuna_456 this week)
+    existing_dedup_keys = set()
+    for row in JobRecord.query.with_entities(JobRecord.title, JobRecord.company).all():
+        dk = _dedup_key(row.title or "", row.company or "")
+        existing_dedup_keys.add(dk)
+
     new_count = 0
     seen_keys = set()
     for job_data in all_raw_jobs:
         unique_key = job_data["unique_key"]
 
-        # Skip duplicates within batch
+        # Skip duplicates within batch (same source/id)
         if unique_key in seen_keys:
             continue
         seen_keys.add(unique_key)
 
-        # Skip if already in DB
+        # Skip if already in DB by unique_key (exact match)
         existing = JobRecord.query.filter_by(unique_key=unique_key).first()
         if existing:
             continue
+
+        # Skip cross-source duplicates: same title+company already stored from another source
+        dk = _dedup_key(job_data["title"], job_data["company"])
+        if dk in existing_dedup_keys:
+            continue
+        existing_dedup_keys.add(dk)  # Reserve so same job twice in this batch is also caught
 
         # Score (include salary in the text for salary filtering)
         scored = score_job(
